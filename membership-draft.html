@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fablab Membership Draft</title>
+  <style>
+    /* ─── Reset & Base Styles ─────────────────────────────────── */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f5f7fa;
+      color: #333;
+      line-height: 1.5;
+      padding: 20px;
+    }
+    h1, h2, h3 {
+      margin-bottom: 10px;
+      color: #222;
+    }
+    ul {
+      list-style: none;
+    }
+    /* ─── Container & Header ─────────────────────────────────── */
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    header h1 {
+      font-size: 2rem;
+    }
+    header p {
+      margin-top: 8px;
+      color: #555;
+    }
+    /* ─── Membership Cards Grid ─────────────────────────────────── */
+    .membership-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      max-width: 1800px;
+      margin: 0 auto;
+    }
+    .card {
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.2s ease;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    }
+    .card-header {
+      background-color: #4a76a8;
+      color: #fff;
+      padding: 20px;
+      text-align: center;
+    }
+    .card-header h2 {
+      font-size: 1.5rem;
+      margin-bottom: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .name-edit-btn {
+      cursor: pointer;
+      color: #666;
+      font-size: 0.9rem;
+      padding: 4px 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background: #f8f9fa;
+      transition: all 0.2s ease;
+    }
+    .name-edit-btn:hover {
+      background: #e9ecef;
+      color: #4a76a8;
+    }
+    .name-input {
+      width: 200px;
+      padding: 4px 8px;
+      border: 1px solid #4a76a8;
+      border-radius: 4px;
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #4a76a8;
+      text-align: center;
+    }
+    .card-header p {
+      font-size: 0.95rem;
+      opacity: 0.9;
+    }
+    .card-body {
+      padding: 20px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .price {
+      font-size: 1.25rem;
+      font-weight: bold;
+      margin-bottom: 15px;
+      color: #4a76a8;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .price-edit-btn {
+      cursor: pointer;
+      color: #666;
+      font-size: 0.9rem;
+      padding: 4px 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background: #f8f9fa;
+      transition: all 0.2s ease;
+    }
+    .price-edit-btn:hover {
+      background: #e9ecef;
+      color: #4a76a8;
+    }
+    .price-input {
+      width: 150px;
+      padding: 4px 8px;
+      border: 1px solid #4a76a8;
+      border-radius: 4px;
+      font-size: 1.25rem;
+      font-weight: bold;
+      color: #4a76a8;
+    }
+    /* ─── Feature List ─────────────────────────────────────────── */
+    .feature-list {
+      margin-top: 10px;
+      flex: 1;
+    }
+    .feature-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #ececec;
+      transition: background-color 0.15s ease;
+    }
+    .feature-item:last-child {
+      border-bottom: none;
+    }
+    .feature-text {
+      flex: 1;
+      font-size: 0.95rem;
+      color: #333;
+    }
+    .feature-icons {
+      display: flex;
+      gap: 12px;
+      margin-left: 10px;
+    }
+    .icon-btn {
+      cursor: pointer;
+      font-size: 1.1rem;
+      user-select: none;
+      transition: color 0.2s ease;
+    }
+    .icon-btn.ok {
+      color: #28a745; /* green */
+    }
+    .icon-btn.ok.included {
+      color: #2e7d32; /* Darker green for the checkmark */
+      font-weight: bold;
+    }
+    .icon-btn.remove {
+      color: #dc3545; /* red */
+    }
+    /* When a feature is "included" (after clicking OK), highlight its row */
+    .included {
+      background-color: #e8f5e9; /* Light green background */
+      border-left: 4px solid #4caf50; /* Green border on the left */
+      padding-left: 12px; /* Add some padding to account for the border */
+    }
+    .feature-item.included .feature-text {
+      color: #1b5e20; /* Dark green text for included features */
+      font-weight: 500;
+    }
+    /* When a feature is hidden (after clicking ✕), we add .hidden to remove from view */
+    .hidden {
+      display: none;
+    }
+    /* Styles for removed features section */
+    .removed-features {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 2px dashed #e0e0e0;
+    }
+    .removed-features h3 {
+      font-size: 1rem;
+      color: #666;
+      margin-bottom: 15px;
+    }
+    .removed-features .feature-item {
+      opacity: 0.7;
+    }
+    .removed-features .feature-item:hover {
+      opacity: 1;
+    }
+    .restore-btn {
+      color: #4a76a8;
+      cursor: pointer;
+      font-size: 0.9rem;
+      margin-left: 10px;
+      text-decoration: underline;
+    }
+    .restore-btn:hover {
+      color: #2c4b6b;
+    }
+    .add-feature-form {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #f8f9fa;
+      border-radius: 8px;
+    }
+    .add-feature-form h3 {
+      font-size: 1rem;
+      color: #666;
+      margin-bottom: 10px;
+    }
+    .new-feature-input {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 0.95rem;
+    }
+    .add-feature-btn {
+      background-color: #4a76a8;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      transition: background-color 0.2s ease;
+    }
+    .add-feature-btn:hover {
+      background-color: #2c4b6b;
+    }
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .button-group .add-feature-btn {
+      flex: 1;
+    }
+    .button-group .add-feature-btn[data-type="restriction"] {
+      background-color: #dc3545;
+    }
+    .button-group .add-feature-btn[data-type="restriction"]:hover {
+      background-color: #c82333;
+    }
+    .section {
+      margin-bottom: 20px;
+      padding: 15px;
+      background-color: #f8f9fa;
+      border-radius: 8px;
+    }
+    .section h3 {
+      font-size: 1.1rem;
+      color: #4a76a8;
+      margin-bottom: 15px;
+    }
+    .restrictions-section {
+      background-color: #fff3f3;
+    }
+    .restrictions-section h3 {
+      color: #dc3545;
+    }
+    .features-section {
+      background-color: #f0f7ff;
+    }
+    .features-section h3 {
+      color: #28a745;
+    }
+    /* Export Button Styles */
+    .export-section {
+      text-align: center;
+      margin: 30px auto;
+      padding: 20px;
+      max-width: 800px;
+    }
+    .export-btn {
+      background-color: #28a745;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background-color 0.2s ease;
+    }
+    .export-btn:hover {
+      background-color: #218838;
+    }
+    .export-info {
+      margin-top: 15px;
+      color: #666;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ─── Header / Hero ─────────────────────────────────── -->
+  <header>
+    <h1>Fablab Membership Draft</h1>
+    <p>Select or remove features in each tier to finalize your plan</p>
+  </header>
+
+  <!-- ─── Membership Cards ─────────────────────────────────── -->
+  <section class="membership-container">
+
+    <!-- ─── 1) Student Tier ──────────────────────────────── -->
+    <div class="card" id="card-student">
+      <div class="card-header">
+        <h2>
+          <span class="tier-name">Student</span>
+          <button class="name-edit-btn">Edit Name</button>
+        </h2>
+        <p>Ideal For: Students, Recent Graduates, Learners</p>
+      </div>
+      <div class="card-body">
+        <div class="price">
+          <span class="price-value">500,000 UZS / month</span>
+          <button class="price-edit-btn">Edit Price</button>
+        </div>
+        
+        <!-- Features Section -->
+        <div class="section features-section">
+          <h3>Features</h3>
+          <ul class="feature-list">
+            <!-- Example Feature #1 -->
+            <li class="feature-item" data-tier="student" data-feature-id="student-feature-1">
+              <span class="feature-text">10 hours/month access to machines</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+            <!-- Example Feature #2 -->
+            <li class="feature-item" data-tier="student">
+              <span class="feature-text">Basic 8-hour training program</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+            <!-- Example Feature #3 -->
+            <li class="feature-item" data-tier="student">
+              <span class="feature-text">Community workshop access (2 sessions/month)</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+            <!-- Example Feature #4 -->
+            <li class="feature-item" data-tier="student">
+              <span class="feature-text">Student project storage (1 m³)</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+            <!-- Example Feature #5 -->
+            <li class="feature-item" data-tier="student">
+              <span class="feature-text">Email technical support</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+            <!-- Example Feature #6 -->
+            <li class="feature-item" data-tier="student">
+              <span class="feature-text">Basic materials included</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+            <!-- Example Feature #7 -->
+            <li class="feature-item" data-tier="student">
+              <span class="feature-text">Educational discount (30% off materials)</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+            <!-- Example Feature #8 -->
+            <li class="feature-item" data-tier="student">
+              <span class="feature-text">Access only during off-peak hours (9AM–5PM)</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Restrictions Section -->
+        <div class="section restrictions-section">
+          <h3>Restrictions</h3>
+          <ul class="restriction-list">
+            <li class="feature-item" data-tier="student">
+              <span class="feature-text">Age: 16-25 years old</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+            <li class="feature-item" data-tier="student">
+              <span class="feature-text">Valid student ID required</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+            <li class="feature-item" data-tier="student">
+              <span class="feature-text">Maximum 2 projects at a time</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <div class="removed-features">
+          <h3>Removed Items</h3>
+          <ul class="feature-list" id="removed-student"></ul>
+        </div>
+        <!-- Add New Feature Form -->
+        <div class="add-feature-form">
+          <h3>Add New Feature</h3>
+          <input type="text" class="new-feature-input" placeholder="Enter new feature description">
+          <div class="button-group">
+            <button class="add-feature-btn" data-tier="student">Add Feature</button>
+            <button class="add-feature-btn" data-tier="student" data-type="restriction">Add Restriction</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── 2) Maker Tier ────────────────────────────────── -->
+    <div class="card" id="card-maker">
+      <div class="card-header">
+        <h2>
+          <span class="tier-name">Maker</span>
+          <button class="name-edit-btn">Edit Name</button>
+        </h2>
+        <p>Ideal For: Hobbyists, Freelancers, Weekend Makers</p>
+      </div>
+      <div class="card-body">
+        <div class="price">
+          <span class="price-value">1,000,000 UZS / month</span>
+          <button class="price-edit-btn">Edit Price</button>
+        </div>
+        
+        <!-- Features Section -->
+        <div class="section features-section">
+          <h3>Features</h3>
+          <ul class="feature-list">
+            <li class="feature-item" data-tier="maker">
+              <span class="feature-text">20 hours/month access to machines</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+            <li class="feature-item" data-tier="maker">
+              <span class="feature-text">Free advanced training session (4 hours)</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+            <li class="feature-item" data-tier="maker">
+              <span class="feature-text">Community workshop access (4 sessions/month)</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+            <li class="feature-item" data-tier="maker">
+              <span class="feature-text">Project storage (2 m³)</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+            <li class="feature-item" data-tier="maker">
+              <span class="feature-text">Priority email/phone support</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+            <li class="feature-item" data-tier="maker">
+              <span class="feature-text">Free basic materials (monthly allowance)</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+            <li class="feature-item" data-tier="maker">
+              <span class="feature-text">15% discount on extra materials</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+            <li class="feature-item" data-tier="maker">
+              <span class="feature-text">Workspace booking (evenings & weekends allowed)</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Restrictions Section -->
+        <div class="section restrictions-section">
+          <h3>Restrictions</h3>
+          <ul class="restriction-list">
+            <li class="feature-item" data-tier="maker">
+              <span class="feature-text">Age: 18+ years old</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+            <li class="feature-item" data-tier="maker">
+              <span class="feature-text">Basic safety training required</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+            <li class="feature-item" data-tier="maker">
+              <span class="feature-text">Maximum 4 projects at a time</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <div class="removed-features">
+          <h3>Removed Items</h3>
+          <ul class="feature-list" id="removed-maker"></ul>
+        </div>
+        <!-- Add New Feature Form -->
+        <div class="add-feature-form">
+          <h3>Add New Feature</h3>
+          <input type="text" class="new-feature-input" placeholder="Enter new feature description">
+          <div class="button-group">
+            <button class="add-feature-btn" data-tier="maker">Add Feature</button>
+            <button class="add-feature-btn" data-tier="maker" data-type="restriction">Add Restriction</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── 3) Professional Tier ───────────────────────────── -->
+    <div class="card" id="card-professional">
+      <div class="card-header">
+        <h2>
+          <span class="tier-name">Professional</span>
+          <button class="name-edit-btn">Edit Name</button>
+        </h2>
+        <p>Ideal For: Entrepreneurs, Small Businesses</p>
+      </div>
+      <div class="card-body">
+        <div class="price">
+          <span class="price-value">2,000,000 UZS / month</span>
+          <button class="price-edit-btn">Edit Price</button>
+        </div>
+        
+        <!-- Features Section -->
+        <div class="section features-section">
+          <h3>Features</h3>
+          <ul class="feature-list">
+            <li class="feature-item" data-tier="professional">
+              <span class="feature-text">40 hours/month access to machines</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+            <li class="feature-item" data-tier="professional">
+              <span class="feature-text">One-on-one coaching session (4 hrs/month)</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+            <li class="feature-item" data-tier="professional">
+              <span class="feature-text">Workshop access (unlimited)</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+            <li class="feature-item" data-tier="professional">
+              <span class="feature-text">Priority storage (5 m³)</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+            <li class="feature-item" data-tier="professional">
+              <span class="feature-text">Dedicated account manager</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+            <li class="feature-item" data-tier="professional">
+              <span class="feature-text">Free premium materials (monthly allowance)</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+            <li class="feature-item" data-tier="professional">
+              <span class="feature-text">20% discount on extra materials</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+            <li class="feature-item" data-tier="professional">
+              <span class="feature-text">24/7 facility access</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Restrictions Section -->
+        <div class="section restrictions-section">
+          <h3>Restrictions</h3>
+          <ul class="restriction-list">
+            <li class="feature-item" data-tier="professional">
+              <span class="feature-text">Age: 21+ years old</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+            <li class="feature-item" data-tier="professional">
+              <span class="feature-text">Advanced safety certification required</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+            <li class="feature-item" data-tier="professional">
+              <span class="feature-text">Business registration required</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <div class="removed-features">
+          <h3>Removed Items</h3>
+          <ul class="feature-list" id="removed-professional"></ul>
+        </div>
+        <!-- Add New Feature Form -->
+        <div class="add-feature-form">
+          <h3>Add New Feature</h3>
+          <input type="text" class="new-feature-input" placeholder="Enter new feature description">
+          <div class="button-group">
+            <button class="add-feature-btn" data-tier="professional">Add Feature</button>
+            <button class="add-feature-btn" data-tier="professional" data-type="restriction">Add Restriction</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── 4) Startup Tier ────────────────────────────────── -->
+    <div class="card" id="card-startup">
+      <div class="card-header">
+        <h2>
+          <span class="tier-name">Startup</span>
+          <button class="name-edit-btn">Edit Name</button>
+        </h2>
+        <p>Ideal For: Startups, R&D Teams, Small Tech Firms</p>
+      </div>
+      <div class="card-body">
+        <div class="price">
+          <span class="price-value">3,500,000 UZS / month</span>
+          <button class="price-edit-btn">Edit Price</button>
+        </div>
+        
+        <!-- Features Section -->
+        <div class="section features-section">
+          <h3>Features</h3>
+          <ul class="feature-list">
+            <li class="feature-item" data-tier="startup">
+              <span class="feature-text">Unlimited machine access</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+            <li class="feature-item" data-tier="startup">
+              <span class="feature-text">Weekly consulting session (2 hrs/week)</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+            <li class="feature-item" data-tier="startup">
+              <span class="feature-text">Full workshop access (unlimited)</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+            <li class="feature-item" data-tier="startup">
+              <span class="feature-text">Priority storage (10 m³)</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+            <li class="feature-item" data-tier="startup">
+              <span class="feature-text">Dedicated technical lead support</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+            <li class="feature-item" data-tier="startup">
+              <span class="feature-text">Free premium materials (highest tier allowance)</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+            <li class="feature-item" data-tier="startup">
+              <span class="feature-text">30% discount on extra materials</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+            <li class="feature-item" data-tier="startup">
+              <span class="feature-text">Private after-hours access + lounge area</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Restrictions Section -->
+        <div class="section restrictions-section">
+          <h3>Restrictions</h3>
+          <ul class="restriction-list">
+            <li class="feature-item" data-tier="startup">
+              <span class="feature-text">Age: 18+ years old</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+            <li class="feature-item" data-tier="startup">
+              <span class="feature-text">Full safety certification required</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+            <li class="feature-item" data-tier="startup">
+              <span class="feature-text">Registered business entity required</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <div class="removed-features">
+          <h3>Removed Items</h3>
+          <ul class="feature-list" id="removed-startup"></ul>
+        </div>
+        <!-- Add New Feature Form -->
+        <div class="add-feature-form">
+          <h3>Add New Feature</h3>
+          <input type="text" class="new-feature-input" placeholder="Enter new feature description">
+          <div class="button-group">
+            <button class="add-feature-btn" data-tier="startup">Add Feature</button>
+            <button class="add-feature-btn" data-tier="startup" data-type="restriction">Add Restriction</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- Export Section -->
+  <section class="export-section">
+    <button class="export-btn" id="exportChanges">Export Changes</button>
+    <p class="export-info">Click to download a JSON file with all membership tier details and changes</p>
+  </section>
+
+  <!-- ─── JavaScript for Toggling Features ─────────────────────────────────── -->
+  <script>
+    // Track changes in a data structure
+    const membershipData = {
+      lastModified: new Date().toISOString(),
+      tiers: {
+        student: {
+          price: "500,000",
+          features: [],
+          restrictions: [],
+          removedItems: []
+        },
+        maker: {
+          price: "1,000,000",
+          features: [],
+          restrictions: [],
+          removedItems: []
+        },
+        professional: {
+          price: "2,000,000",
+          features: [],
+          restrictions: [],
+          removedItems: []
+        },
+        startup: {
+          price: "3,500,000",
+          features: [],
+          restrictions: [],
+          removedItems: []
+        }
+      }
+    };
+
+    // Function to update membership data
+    function updateMembershipData() {
+      membershipData.lastModified = new Date().toISOString();
+      
+      // Update prices
+      document.querySelectorAll('.price-value').forEach(priceEl => {
+        const tier = priceEl.closest('.card').id.replace('card-', '');
+        membershipData.tiers[tier].price = priceEl.textContent.split(' ')[0].replace(/,/g, '');
+      });
+
+      // Update features and restrictions
+      document.querySelectorAll('.card').forEach(card => {
+        const tier = card.id.replace('card-', '');
+        
+        // Get included features
+        membershipData.tiers[tier].features = Array.from(card.querySelectorAll('.features-section .feature-item:not(.hidden)'))
+          .map(item => ({
+            text: item.querySelector('.feature-text').textContent,
+            included: item.classList.contains('included')
+          }));
+
+        // Get restrictions
+        membershipData.tiers[tier].restrictions = Array.from(card.querySelectorAll('.restrictions-section .feature-item:not(.hidden)'))
+          .map(item => ({
+            text: item.querySelector('.feature-text').textContent,
+            included: item.classList.contains('included')
+          }));
+
+        // Get removed items
+        membershipData.tiers[tier].removedItems = Array.from(card.querySelectorAll('.removed-features .feature-item'))
+          .map(item => item.querySelector('.feature-text').textContent);
+      });
+    }
+
+    // Export functionality
+    document.getElementById('exportChanges').addEventListener('click', function() {
+      updateMembershipData();
+      
+      // Create a formatted JSON string
+      const jsonString = JSON.stringify(membershipData, null, 2);
+      
+      // Create a blob and download link
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `membership-changes-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    // Update data when prices change
+    document.querySelectorAll('.price-edit-btn').forEach(button => {
+      button.addEventListener('click', function() {
+        const priceContainer = this.parentElement;
+        const priceValue = priceContainer.querySelector('.price-value');
+        const currentPrice = priceValue.textContent.split(' ')[0].replace(/,/g, '');
+        
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'price-input';
+        input.value = currentPrice;
+        
+        priceValue.style.display = 'none';
+        priceContainer.insertBefore(input, this);
+        input.focus();
+        
+        const handlePriceUpdate = () => {
+          const newPrice = input.value.replace(/,/g, '');
+          if (!isNaN(newPrice) && newPrice > 0) {
+            const formattedPrice = parseInt(newPrice).toLocaleString();
+            priceValue.textContent = `${formattedPrice} UZS / month`;
+            updateMembershipData(); // Update data when price changes
+          }
+          input.remove();
+          priceValue.style.display = 'inline';
+        };
+        
+        input.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
+            handlePriceUpdate();
+          }
+        });
+        
+        input.addEventListener('blur', handlePriceUpdate);
+      });
+    });
+
+    // Update data when features are toggled
+    document.querySelectorAll('.icon-btn').forEach(icon => {
+      icon.addEventListener('click', function() {
+        const action = this.getAttribute('data-action');
+        const featureItem = this.closest('.feature-item');
+        const tier = featureItem.getAttribute('data-tier');
+        const featureId = featureItem.getAttribute('data-feature-id') || `${tier}-feature-${Date.now()}`;
+        featureItem.setAttribute('data-feature-id', featureId);
+
+        if (action === 'include') {
+          if (featureItem.classList.contains('included')) {
+            featureItem.classList.remove('included');
+            this.classList.remove('included');
+          } else {
+            featureItem.classList.add('included');
+            this.classList.add('included');
+          }
+          updateMembershipData();
+        }
+        else if (action === 'remove') {
+          const removedList = document.getElementById(`removed-${tier}`);
+          const clonedItem = featureItem.cloneNode(true);
+          clonedItem.setAttribute('data-feature-id', featureId);
+          
+          const restoreBtn = document.createElement('span');
+          restoreBtn.className = 'restore-btn';
+          restoreBtn.textContent = 'Restore';
+          restoreBtn.onclick = function() {
+            const isRestriction = featureItem.closest('.restrictions-section') !== null;
+            const sectionClass = isRestriction ? 'restrictions-section' : 'features-section';
+            const listClass = isRestriction ? 'restriction-list' : 'feature-list';
+            
+            const originalItem = document.querySelector(`#card-${tier} .${sectionClass} .${listClass} [data-feature-id="${featureId}"]`);
+            if (originalItem) {
+              originalItem.classList.remove('hidden');
+            }
+            clonedItem.remove();
+            updateMembershipData();
+          };
+          
+          clonedItem.querySelector('.feature-icons').appendChild(restoreBtn);
+          removedList.appendChild(clonedItem);
+          featureItem.classList.add('hidden');
+          updateMembershipData();
+        }
+      });
+    });
+
+    // Update data when new features are added
+    document.querySelectorAll('.add-feature-btn').forEach(button => {
+      button.addEventListener('click', function() {
+        const tier = this.getAttribute('data-tier');
+        const type = this.getAttribute('data-type') || 'feature';
+        const input = this.closest('.add-feature-form').querySelector('.new-feature-input');
+        const text = input.value.trim();
+        
+        if (text) {
+          const list = document.querySelector(`#card-${tier} .${type === 'restriction' ? 'restrictions-section' : 'features-section'} .${type === 'restriction' ? 'restriction-list' : 'feature-list'}`);
+          const newItem = document.createElement('li');
+          newItem.className = 'feature-item';
+          newItem.setAttribute('data-tier', tier);
+          newItem.setAttribute('data-feature-id', `${type}-${Date.now()}`);
+          
+          newItem.innerHTML = `
+            <span class="feature-text">${text}</span>
+            <div class="feature-icons">
+              <span class="icon-btn ok" data-action="include">✓</span>
+              <span class="icon-btn remove" data-action="remove">✕</span>
+            </div>
+          `;
+          
+          list.appendChild(newItem);
+          input.value = '';
+          updateMembershipData();
+          
+          // Add event listeners to the new item's buttons
+          newItem.querySelectorAll('.icon-btn').forEach(icon => {
+            icon.addEventListener('click', function() {
+              const action = this.getAttribute('data-action');
+              if (action === 'include') {
+                if (newItem.classList.contains('included')) {
+                  newItem.classList.remove('included');
+                  this.classList.remove('included');
+                } else {
+                  newItem.classList.add('included');
+                  this.classList.add('included');
+                }
+                updateMembershipData();
+              }
+              else if (action === 'remove') {
+                const removedList = document.getElementById(`removed-${tier}`);
+                const clonedItem = newItem.cloneNode(true);
+                
+                const restoreBtn = document.createElement('span');
+                restoreBtn.className = 'restore-btn';
+                restoreBtn.textContent = 'Restore';
+                restoreBtn.onclick = function() {
+                  const originalList = document.querySelector(`#card-${tier} .${type === 'restriction' ? 'restrictions-section' : 'features-section'} .${type === 'restriction' ? 'restriction-list' : 'feature-list'}`);
+                  const originalItem = document.querySelector(`#card-${tier} [data-feature-id="${clonedItem.getAttribute('data-feature-id')}"]`);
+                  if (originalItem) {
+                    originalItem.classList.remove('hidden');
+                  }
+                  clonedItem.remove();
+                  updateMembershipData();
+                };
+                
+                clonedItem.querySelector('.feature-icons').appendChild(restoreBtn);
+                removedList.appendChild(clonedItem);
+                newItem.classList.add('hidden');
+                updateMembershipData();
+              }
+            });
+          });
+        }
+      });
+    });
+
+    // Add name editing functionality
+    document.querySelectorAll('.name-edit-btn').forEach(button => {
+      button.addEventListener('click', function() {
+        const header = this.closest('h2');
+        const nameSpan = header.querySelector('.tier-name');
+        const currentName = nameSpan.textContent;
+        
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'name-input';
+        input.value = currentName;
+        
+        nameSpan.style.display = 'none';
+        header.insertBefore(input, this);
+        input.focus();
+        
+        const handleNameUpdate = () => {
+          const newName = input.value.trim();
+          if (newName) {
+            nameSpan.textContent = newName;
+            updateMembershipData();
+          }
+          input.remove();
+          nameSpan.style.display = 'inline';
+        };
+        
+        input.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
+            handleNameUpdate();
+          }
+        });
+        
+        input.addEventListener('blur', handleNameUpdate);
+      });
+    });
+  </script>
+</body>
+</html> 
