@@ -834,6 +834,90 @@
 
   <!-- ─── JavaScript for Toggling Features ─────────────────────────────────── -->
   <script>
+    // IndexedDB setup
+    const dbName = 'membershipDB';
+    const storeName = 'membershipData';
+    let db;
+
+    // Initialize IndexedDB
+    const initDB = () => {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(dbName, 1);
+
+        request.onerror = (event) => {
+          console.error('Database error:', event.target.error);
+          reject(event.target.error);
+        };
+
+        request.onsuccess = (event) => {
+          db = event.target.result;
+          console.log('Database connected');
+          resolve(db);
+        };
+
+        request.onupgradeneeded = (event) => {
+          const db = event.target.result;
+          if (!db.objectStoreNames.contains(storeName)) {
+            db.createObjectStore(storeName);
+          }
+        };
+      });
+    };
+
+    // Save data to IndexedDB
+    const saveToIndexedDB = async (data) => {
+      try {
+        if (!db) await initDB();
+        return new Promise((resolve, reject) => {
+          const transaction = db.transaction([storeName], 'readwrite');
+          const store = transaction.objectStore(storeName);
+          const request = store.put(data, 'currentMembership');
+
+          request.onsuccess = () => {
+            console.log('Data saved successfully');
+            resolve();
+          };
+
+          request.onerror = (event) => {
+            console.error('Error saving data:', event.target.error);
+            reject(event.target.error);
+          };
+        });
+      } catch (error) {
+        console.error('Error in saveToIndexedDB:', error);
+      }
+    };
+
+    // Load data from IndexedDB
+    const loadFromIndexedDB = async () => {
+      try {
+        if (!db) await initDB();
+        return new Promise((resolve, reject) => {
+          const transaction = db.transaction([storeName], 'readonly');
+          const store = transaction.objectStore(storeName);
+          const request = store.get('currentMembership');
+
+          request.onsuccess = (event) => {
+            const data = event.target.result;
+            if (data) {
+              console.log('Data loaded successfully');
+              resolve(data);
+            } else {
+              resolve(null);
+            }
+          };
+
+          request.onerror = (event) => {
+            console.error('Error loading data:', event.target.error);
+            reject(event.target.error);
+          };
+        });
+      } catch (error) {
+        console.error('Error in loadFromIndexedDB:', error);
+        return null;
+      }
+    };
+
     // Track changes in a data structure
     const membershipData = {
       lastModified: new Date().toISOString(),
@@ -866,22 +950,29 @@
     };
 
     // Function to update membership data
-    function updateMembershipData() {
+    async function updateMembershipData() {
       membershipData.lastModified = new Date().toISOString();
       
-      // Update prices
-      document.querySelectorAll('.price-value').forEach(priceEl => {
-        const tier = priceEl.closest('.card').id.replace('card-', '');
-        membershipData.tiers[tier].price = priceEl.textContent.split(' ')[0].replace(/,/g, '');
-      });
-
-      // Update features and restrictions
+      // Update prices and names
       document.querySelectorAll('.card').forEach(card => {
         const tier = card.id.replace('card-', '');
+        
+        // Update price
+        const priceEl = card.querySelector('.price-value');
+        if (priceEl) {
+          membershipData.tiers[tier].price = priceEl.textContent.split(' ')[0].replace(/,/g, '');
+        }
+
+        // Update tier name
+        const nameEl = card.querySelector('.tier-name');
+        if (nameEl) {
+          membershipData.tiers[tier].name = nameEl.textContent;
+        }
         
         // Get included features
         membershipData.tiers[tier].features = Array.from(card.querySelectorAll('.features-section .feature-item:not(.hidden)'))
           .map(item => ({
+            id: item.getAttribute('data-feature-id') || `${tier}-feature-${Date.now()}`,
             text: item.querySelector('.feature-text').textContent,
             included: item.classList.contains('included')
           }));
@@ -889,19 +980,363 @@
         // Get restrictions
         membershipData.tiers[tier].restrictions = Array.from(card.querySelectorAll('.restrictions-section .feature-item:not(.hidden)'))
           .map(item => ({
+            id: item.getAttribute('data-feature-id') || `${tier}-restriction-${Date.now()}`,
             text: item.querySelector('.feature-text').textContent,
             included: item.classList.contains('included')
           }));
 
         // Get removed items
         membershipData.tiers[tier].removedItems = Array.from(card.querySelectorAll('.removed-features .feature-item'))
-          .map(item => item.querySelector('.feature-text').textContent);
+          .map(item => ({
+            id: item.getAttribute('data-feature-id') || `${tier}-removed-${Date.now()}`,
+            text: item.querySelector('.feature-text').textContent
+          }));
+      });
+
+      // Save to IndexedDB
+      await saveToIndexedDB(membershipData);
+    }
+
+    // Load saved data when page loads
+    window.addEventListener('load', async () => {
+      const savedData = await loadFromIndexedDB();
+      if (savedData) {
+        // Restore prices and names
+        Object.entries(savedData.tiers).forEach(([tier, data]) => {
+          const card = document.querySelector(`#card-${tier}`);
+          if (card) {
+            // Restore price
+            const priceEl = card.querySelector('.price-value');
+            if (priceEl && data.price) {
+              priceEl.textContent = `${parseInt(data.price).toLocaleString()} UZS / month`;
+            }
+
+            // Restore tier name
+            const nameEl = card.querySelector('.tier-name');
+            if (nameEl && data.name) {
+              nameEl.textContent = data.name;
+            }
+
+            // Clear existing features and restrictions
+            const featuresList = card.querySelector('.features-section .feature-list');
+            const restrictionsList = card.querySelector('.restrictions-section .restriction-list');
+            const removedList = document.getElementById(`removed-${tier}`);
+            
+            if (featuresList) featuresList.innerHTML = '';
+            if (restrictionsList) restrictionsList.innerHTML = '';
+            if (removedList) removedList.innerHTML = '';
+
+            // Restore features
+            if (data.features && featuresList) {
+              data.features.forEach(feature => {
+                const featureItem = document.createElement('li');
+                featureItem.className = 'feature-item';
+                featureItem.setAttribute('data-tier', tier);
+                featureItem.setAttribute('data-feature-id', feature.id);
+                if (feature.included) {
+                  featureItem.classList.add('included');
+                }
+                
+                featureItem.innerHTML = `
+                  <span class="feature-text">${feature.text}</span>
+                  <div class="feature-icons">
+                    <span class="icon-btn ok ${feature.included ? 'included' : ''}" data-action="include">✓</span>
+                    <span class="icon-btn remove" data-action="remove">✕</span>
+                  </div>
+                `;
+                featuresList.appendChild(featureItem);
+              });
+            }
+
+            // Restore restrictions
+            if (data.restrictions && restrictionsList) {
+              data.restrictions.forEach(restriction => {
+                const restrictionItem = document.createElement('li');
+                restrictionItem.className = 'feature-item';
+                restrictionItem.setAttribute('data-tier', tier);
+                restrictionItem.setAttribute('data-feature-id', restriction.id);
+                if (restriction.included) {
+                  restrictionItem.classList.add('included');
+                }
+                
+                restrictionItem.innerHTML = `
+                  <span class="feature-text">${restriction.text}</span>
+                  <div class="feature-icons">
+                    <span class="icon-btn ok ${restriction.included ? 'included' : ''}" data-action="include">✓</span>
+                    <span class="icon-btn remove" data-action="remove">✕</span>
+                  </div>
+                `;
+                restrictionsList.appendChild(restrictionItem);
+              });
+            }
+
+            // Restore removed items
+            if (data.removedItems && removedList) {
+              data.removedItems.forEach(item => {
+                const removedItem = document.createElement('li');
+                removedItem.className = 'feature-item';
+                removedItem.setAttribute('data-feature-id', item.id);
+                
+                removedItem.innerHTML = `
+                  <span class="feature-text">${item.text}</span>
+                  <div class="feature-icons">
+                    <span class="restore-btn">Restore</span>
+                  </div>
+                `;
+
+                // Add click event listener to restore button
+                const restoreBtn = removedItem.querySelector('.restore-btn');
+                restoreBtn.addEventListener('click', async function() {
+                  const featureId = removedItem.getAttribute('data-feature-id');
+                  const isRestriction = featureId.includes('restriction');
+                  const sectionClass = isRestriction ? 'restrictions-section' : 'features-section';
+                  const listClass = isRestriction ? 'restriction-list' : 'feature-list';
+                  
+                  const originalItem = document.querySelector(`#card-${tier} .${sectionClass} .${listClass} [data-feature-id="${featureId}"]`);
+                  if (originalItem) {
+                    originalItem.classList.remove('hidden');
+                    removedItem.remove();
+                    await updateMembershipData();
+                  }
+                });
+
+                removedList.appendChild(removedItem);
+              });
+            }
+          }
+        });
+
+        // Reattach event listeners to all buttons
+        attachEventListeners();
+      }
+    });
+
+    // Function to attach event listeners
+    function attachEventListeners() {
+      // Price edit buttons
+      document.querySelectorAll('.price-edit-btn').forEach(button => {
+        button.addEventListener('click', function() {
+          const priceContainer = this.parentElement;
+          const priceValue = priceContainer.querySelector('.price-value');
+          const currentPrice = priceValue.textContent.split(' ')[0].replace(/,/g, '');
+          
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.className = 'price-input';
+          input.value = currentPrice;
+          
+          priceValue.style.display = 'none';
+          priceContainer.insertBefore(input, this);
+          input.focus();
+          
+          const handlePriceUpdate = async () => {
+            const newPrice = input.value.replace(/,/g, '');
+            if (!isNaN(newPrice) && newPrice > 0) {
+              const formattedPrice = parseInt(newPrice).toLocaleString();
+              priceValue.textContent = `${formattedPrice} UZS / month`;
+              await updateMembershipData();
+            }
+            input.remove();
+            priceValue.style.display = 'inline';
+          };
+          
+          input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+              handlePriceUpdate();
+            }
+          });
+          
+          input.addEventListener('blur', handlePriceUpdate);
+        });
+      });
+
+      // Add restore button functionality
+      document.querySelectorAll('.restore-btn').forEach(restoreBtn => {
+        restoreBtn.addEventListener('click', async function() {
+          const removedItem = this.closest('.feature-item');
+          const featureId = removedItem.getAttribute('data-feature-id');
+          const tier = removedItem.closest('.card').id.replace('card-', '');
+          
+          // Determine if it's a feature or restriction
+          const isRestriction = featureId.includes('restriction');
+          const sectionClass = isRestriction ? 'restrictions-section' : 'features-section';
+          const listClass = isRestriction ? 'restriction-list' : 'feature-list';
+          
+          // Find the original item
+          const originalItem = document.querySelector(`#card-${tier} .${sectionClass} .${listClass} [data-feature-id="${featureId}"]`);
+          
+          if (originalItem) {
+            // Remove hidden class to show the item
+            originalItem.classList.remove('hidden');
+            // Remove the item from removed list
+            removedItem.remove();
+            // Update the data
+            await updateMembershipData();
+          }
+        });
+      });
+
+      // Feature toggle buttons
+      document.querySelectorAll('.icon-btn').forEach(icon => {
+        icon.addEventListener('click', async function() {
+          const action = this.getAttribute('data-action');
+          const featureItem = this.closest('.feature-item');
+          const tier = featureItem.getAttribute('data-tier');
+          const featureId = featureItem.getAttribute('data-feature-id') || `${tier}-feature-${Date.now()}`;
+          featureItem.setAttribute('data-feature-id', featureId);
+
+          if (action === 'include') {
+            if (featureItem.classList.contains('included')) {
+              featureItem.classList.remove('included');
+              this.classList.remove('included');
+            } else {
+              featureItem.classList.add('included');
+              this.classList.add('included');
+            }
+            await updateMembershipData();
+          }
+          else if (action === 'remove') {
+            const removedList = document.getElementById(`removed-${tier}`);
+            const clonedItem = featureItem.cloneNode(true);
+            clonedItem.setAttribute('data-feature-id', featureId);
+            
+            // Create restore button
+            const restoreBtn = document.createElement('span');
+            restoreBtn.className = 'restore-btn';
+            restoreBtn.textContent = 'Restore';
+            
+            // Add click event listener to restore button
+            restoreBtn.addEventListener('click', async function() {
+              featureItem.classList.remove('hidden');
+              clonedItem.remove();
+              await updateMembershipData();
+            });
+            
+            // Replace the feature icons with just the restore button
+            const iconsContainer = clonedItem.querySelector('.feature-icons');
+            iconsContainer.innerHTML = '';
+            iconsContainer.appendChild(restoreBtn);
+            
+            removedList.appendChild(clonedItem);
+            featureItem.classList.add('hidden');
+            await updateMembershipData();
+          }
+        });
+      });
+
+      // Name edit buttons
+      document.querySelectorAll('.name-edit-btn').forEach(button => {
+        button.addEventListener('click', function() {
+          const header = this.closest('h2');
+          const nameSpan = header.querySelector('.tier-name');
+          const currentName = nameSpan.textContent;
+          
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.className = 'name-input';
+          input.value = currentName;
+          
+          nameSpan.style.display = 'none';
+          header.insertBefore(input, this);
+          input.focus();
+          
+          const handleNameUpdate = async () => {
+            const newName = input.value.trim();
+            if (newName) {
+              nameSpan.textContent = newName;
+              await updateMembershipData();
+            }
+            input.remove();
+            nameSpan.style.display = 'inline';
+          };
+          
+          input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+              handleNameUpdate();
+            }
+          });
+          
+          input.addEventListener('blur', handleNameUpdate);
+        });
+      });
+
+      // Add feature buttons
+      document.querySelectorAll('.add-feature-btn').forEach(button => {
+        button.addEventListener('click', async function() {
+          const tier = this.getAttribute('data-tier');
+          const type = this.getAttribute('data-type') || 'feature';
+          const input = this.closest('.add-feature-form').querySelector('.new-feature-input');
+          const text = input.value.trim();
+          
+          if (text) {
+            const list = document.querySelector(`#card-${tier} .${type === 'restriction' ? 'restrictions-section' : 'features-section'} .${type === 'restriction' ? 'restriction-list' : 'feature-list'}`);
+            const newItem = document.createElement('li');
+            newItem.className = 'feature-item';
+            newItem.setAttribute('data-tier', tier);
+            const featureId = `${type}-${Date.now()}`;
+            newItem.setAttribute('data-feature-id', featureId);
+            
+            newItem.innerHTML = `
+              <span class="feature-text">${text}</span>
+              <div class="feature-icons">
+                <span class="icon-btn ok" data-action="include">✓</span>
+                <span class="icon-btn remove" data-action="remove">✕</span>
+              </div>
+            `;
+            
+            list.appendChild(newItem);
+            input.value = '';
+            await updateMembershipData();
+            
+            // Add event listeners to the new item's buttons
+            newItem.querySelectorAll('.icon-btn').forEach(icon => {
+              icon.addEventListener('click', async function() {
+                const action = this.getAttribute('data-action');
+                if (action === 'include') {
+                  if (newItem.classList.contains('included')) {
+                    newItem.classList.remove('included');
+                    this.classList.remove('included');
+                  } else {
+                    newItem.classList.add('included');
+                    this.classList.add('included');
+                  }
+                  await updateMembershipData();
+                }
+                else if (action === 'remove') {
+                  const removedList = document.getElementById(`removed-${tier}`);
+                  const clonedItem = newItem.cloneNode(true);
+                  
+                  const restoreBtn = document.createElement('span');
+                  restoreBtn.className = 'restore-btn';
+                  restoreBtn.textContent = 'Restore';
+                  restoreBtn.onclick = async function() {
+                    const originalList = document.querySelector(`#card-${tier} .${type === 'restriction' ? 'restrictions-section' : 'features-section'} .${type === 'restriction' ? 'restriction-list' : 'feature-list'}`);
+                    const originalItem = document.querySelector(`#card-${tier} [data-feature-id="${clonedItem.getAttribute('data-feature-id')}"]`);
+                    if (originalItem) {
+                      originalItem.classList.remove('hidden');
+                    }
+                    clonedItem.remove();
+                    await updateMembershipData();
+                  };
+                  
+                  clonedItem.querySelector('.feature-icons').appendChild(restoreBtn);
+                  removedList.appendChild(clonedItem);
+                  newItem.classList.add('hidden');
+                  await updateMembershipData();
+                }
+              });
+            });
+          }
+        });
       });
     }
 
+    // Initial attachment of event listeners
+    attachEventListeners();
+
     // Export functionality
-    document.getElementById('exportChanges').addEventListener('click', function() {
-      updateMembershipData();
+    document.getElementById('exportChanges').addEventListener('click', async function() {
+      await updateMembershipData();
       
       // Create a formatted JSON string
       const jsonString = JSON.stringify(membershipData, null, 2);
@@ -916,196 +1351,6 @@
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    });
-
-    // Update data when prices change
-    document.querySelectorAll('.price-edit-btn').forEach(button => {
-      button.addEventListener('click', function() {
-        const priceContainer = this.parentElement;
-        const priceValue = priceContainer.querySelector('.price-value');
-        const currentPrice = priceValue.textContent.split(' ')[0].replace(/,/g, '');
-        
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.className = 'price-input';
-        input.value = currentPrice;
-        
-        priceValue.style.display = 'none';
-        priceContainer.insertBefore(input, this);
-        input.focus();
-        
-        const handlePriceUpdate = () => {
-          const newPrice = input.value.replace(/,/g, '');
-          if (!isNaN(newPrice) && newPrice > 0) {
-            const formattedPrice = parseInt(newPrice).toLocaleString();
-            priceValue.textContent = `${formattedPrice} UZS / month`;
-            updateMembershipData(); // Update data when price changes
-          }
-          input.remove();
-          priceValue.style.display = 'inline';
-        };
-        
-        input.addEventListener('keypress', (e) => {
-          if (e.key === 'Enter') {
-            handlePriceUpdate();
-          }
-        });
-        
-        input.addEventListener('blur', handlePriceUpdate);
-      });
-    });
-
-    // Update data when features are toggled
-    document.querySelectorAll('.icon-btn').forEach(icon => {
-      icon.addEventListener('click', function() {
-        const action = this.getAttribute('data-action');
-        const featureItem = this.closest('.feature-item');
-        const tier = featureItem.getAttribute('data-tier');
-        const featureId = featureItem.getAttribute('data-feature-id') || `${tier}-feature-${Date.now()}`;
-        featureItem.setAttribute('data-feature-id', featureId);
-
-        if (action === 'include') {
-          if (featureItem.classList.contains('included')) {
-            featureItem.classList.remove('included');
-            this.classList.remove('included');
-          } else {
-            featureItem.classList.add('included');
-            this.classList.add('included');
-          }
-          updateMembershipData();
-        }
-        else if (action === 'remove') {
-          const removedList = document.getElementById(`removed-${tier}`);
-          const clonedItem = featureItem.cloneNode(true);
-          clonedItem.setAttribute('data-feature-id', featureId);
-          
-          const restoreBtn = document.createElement('span');
-          restoreBtn.className = 'restore-btn';
-          restoreBtn.textContent = 'Restore';
-          restoreBtn.onclick = function() {
-            const isRestriction = featureItem.closest('.restrictions-section') !== null;
-            const sectionClass = isRestriction ? 'restrictions-section' : 'features-section';
-            const listClass = isRestriction ? 'restriction-list' : 'feature-list';
-            
-            const originalItem = document.querySelector(`#card-${tier} .${sectionClass} .${listClass} [data-feature-id="${featureId}"]`);
-            if (originalItem) {
-              originalItem.classList.remove('hidden');
-            }
-            clonedItem.remove();
-            updateMembershipData();
-          };
-          
-          clonedItem.querySelector('.feature-icons').appendChild(restoreBtn);
-          removedList.appendChild(clonedItem);
-          featureItem.classList.add('hidden');
-          updateMembershipData();
-        }
-      });
-    });
-
-    // Update data when new features are added
-    document.querySelectorAll('.add-feature-btn').forEach(button => {
-      button.addEventListener('click', function() {
-        const tier = this.getAttribute('data-tier');
-        const type = this.getAttribute('data-type') || 'feature';
-        const input = this.closest('.add-feature-form').querySelector('.new-feature-input');
-        const text = input.value.trim();
-        
-        if (text) {
-          const list = document.querySelector(`#card-${tier} .${type === 'restriction' ? 'restrictions-section' : 'features-section'} .${type === 'restriction' ? 'restriction-list' : 'feature-list'}`);
-          const newItem = document.createElement('li');
-          newItem.className = 'feature-item';
-          newItem.setAttribute('data-tier', tier);
-          newItem.setAttribute('data-feature-id', `${type}-${Date.now()}`);
-          
-          newItem.innerHTML = `
-            <span class="feature-text">${text}</span>
-            <div class="feature-icons">
-              <span class="icon-btn ok" data-action="include">✓</span>
-              <span class="icon-btn remove" data-action="remove">✕</span>
-            </div>
-          `;
-          
-          list.appendChild(newItem);
-          input.value = '';
-          updateMembershipData();
-          
-          // Add event listeners to the new item's buttons
-          newItem.querySelectorAll('.icon-btn').forEach(icon => {
-            icon.addEventListener('click', function() {
-              const action = this.getAttribute('data-action');
-              if (action === 'include') {
-                if (newItem.classList.contains('included')) {
-                  newItem.classList.remove('included');
-                  this.classList.remove('included');
-                } else {
-                  newItem.classList.add('included');
-                  this.classList.add('included');
-                }
-                updateMembershipData();
-              }
-              else if (action === 'remove') {
-                const removedList = document.getElementById(`removed-${tier}`);
-                const clonedItem = newItem.cloneNode(true);
-                
-                const restoreBtn = document.createElement('span');
-                restoreBtn.className = 'restore-btn';
-                restoreBtn.textContent = 'Restore';
-                restoreBtn.onclick = function() {
-                  const originalList = document.querySelector(`#card-${tier} .${type === 'restriction' ? 'restrictions-section' : 'features-section'} .${type === 'restriction' ? 'restriction-list' : 'feature-list'}`);
-                  const originalItem = document.querySelector(`#card-${tier} [data-feature-id="${clonedItem.getAttribute('data-feature-id')}"]`);
-                  if (originalItem) {
-                    originalItem.classList.remove('hidden');
-                  }
-                  clonedItem.remove();
-                  updateMembershipData();
-                };
-                
-                clonedItem.querySelector('.feature-icons').appendChild(restoreBtn);
-                removedList.appendChild(clonedItem);
-                newItem.classList.add('hidden');
-                updateMembershipData();
-              }
-            });
-          });
-        }
-      });
-    });
-
-    // Add name editing functionality
-    document.querySelectorAll('.name-edit-btn').forEach(button => {
-      button.addEventListener('click', function() {
-        const header = this.closest('h2');
-        const nameSpan = header.querySelector('.tier-name');
-        const currentName = nameSpan.textContent;
-        
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.className = 'name-input';
-        input.value = currentName;
-        
-        nameSpan.style.display = 'none';
-        header.insertBefore(input, this);
-        input.focus();
-        
-        const handleNameUpdate = () => {
-          const newName = input.value.trim();
-          if (newName) {
-            nameSpan.textContent = newName;
-            updateMembershipData();
-          }
-          input.remove();
-          nameSpan.style.display = 'inline';
-        };
-        
-        input.addEventListener('keypress', (e) => {
-          if (e.key === 'Enter') {
-            handleNameUpdate();
-          }
-        });
-        
-        input.addEventListener('blur', handleNameUpdate);
-      });
     });
   </script>
 </body>
